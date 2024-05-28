@@ -16,7 +16,7 @@ app.post('/matchmaking', (req, res) => {
     const player1 = waitingPlayers.shift();
     const player2 = waitingPlayers.shift();
     console.log(`Match trouvé : ${player1} vs ${player2}`);
-    res.send({ redirect: '/game.html' }); // Redirection vers la page de jeu
+    res.send({ redirect: 'game.html' }); // Redirection vers la page de jeu
   } else {
     res.send('En attente de partie');
   }
