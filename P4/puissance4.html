@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morpion</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 10px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            font-size: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Morpion</h1>
+        <div class="board">
+            <?php
+                // Initialiser le tableau de jeu
+                $board = [
+                    ['', '', ''],
+                    ['', '', ''],
+                    ['', '', '']
+                ];
+
+                // Vérifier si une cellule a été cliquée
+                if (isset($_GET['cell'])) {
+                    $cell = $_GET['cell'];
+                    $row = floor($cell / 3);
+                    $col = $cell % 3;
+                    $board[$row][$col] = 'X'; // Remplacer 'X' par le symbole du joueur actuel (X ou O)
+                }
+
+                // Afficher le tableau de jeu
+                for ($i = 0; $i < 3; $i++) {
+                    for ($j = 0; $j < 3; $j++) {
+                        echo '<div class="cell">' . $board[$i][$j] . '</div>';
+                    }
+                }
+            ?>
+        </div>
+    </div>
+</body>
+</html>
