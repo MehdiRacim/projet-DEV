@@ -14,99 +14,97 @@ app.use(bodyParser.json());
 
 let waitingPlayers = [];
 
-// Structure pour stocker l'état du jeu pour chaque salle
 const gameStates = {};
 
-// Fonction pour vérifier si un joueur a gagné
-function checkWin(board, row, col, player) {
-    // Logique de vérification de victoire...
+function checkWin(board, player) {
+    const winPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+        [0, 4, 8], [2, 4, 6]  // Diagonals
+    ];
+
+    return winPatterns.some(pattern => 
+        pattern.every(index => 
+            board[Math.floor(index / 3)][index % 3] === player
+        )
+    );
 }
 
-// Fonction pour mettre à jour l'état du jeu et vérifier si quelqu'un a gagné
-function updateGameState(room, move, player) {
+function updateGameState(room, cell, player) {
     const gameState = gameStates[room];
-    const column = move;
-    const row = gameState.heights[column];
+    const row = Math.floor(cell / 3);
+    const col = cell % 3;
 
-    // Vérifier si la colonne est pleine
-    if (row >= 6) {
+    if (gameState.board[row][col] || gameState.winner) {
         return;
     }
 
-    // Mettre à jour le plateau de jeu avec le mouvement du joueur
-    gameState.board[row][column] = player;
-    gameState.heights[column]++;
+    gameState.board[row][col] = player;
+    gameState.winner = checkWin(gameState.board, player);
 
-    // Vérifier s'il y a un gagnant
-    gameState.winner = checkWin(gameState.board, row, column, player);
-
-    // Passer au prochain joueur
-    gameState.currentPlayer = gameState.currentPlayer === gameState.player1 ? gameState.player2 : gameState.player1;
+    if (!gameState.winner) {
+        gameState.currentPlayer = gameState.currentPlayer === gameState.player1 ? gameState.player2 : gameState.player1;
+    }
 }
 
-// Route pour servir la page d'accueil
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Route pour servir la page d'attente
 app.get('/wait.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'wait.html'));
 });
 
-// Route pour servir la page Puissance 4
 app.get('/puissance4.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'puissance4.html'));
 });
 
-// Socket.IO logic
 io.on('connection', (socket) => {
     console.log('Nouveau client connecté', socket.id);
 
-    // Ajouter le joueur à la file d'attente
     waitingPlayers.push({ id: socket.id });
     console.log(`Joueurs en attente: ${waitingPlayers.map(player => player.id)}`);
 
-    // Vérifier si nous avons au moins deux joueurs en attente
     if (waitingPlayers.length >= 2) {
         const player1 = waitingPlayers.shift().id;
         const player2 = waitingPlayers.shift().id;
         const room = `game_${player1}_${player2}`;
         console.log(`Match trouvé : ${player1} vs ${player2} dans la salle ${room}`);
 
-        // Informer les deux joueurs du match et les rediriger vers la page de jeu
         io.to(player1).emit('match_found', { opponent: player2, room: room, redirect: '/puissance4.html' });
         io.to(player2).emit('match_found', { opponent: player1, room: room, redirect: '/puissance4.html' });
 
-        // Faire rejoindre la salle aux deux joueurs
         io.sockets.sockets.get(player1).join(room);
         io.sockets.sockets.get(player2).join(room);
 
-        // Initialiser l'état du jeu pour cette salle
         gameStates[room] = {
-            board: Array.from({ length: 6 }, () => Array.from({ length: 7 }, () => null)),
-            heights: Array(7).fill(0),
+            board: Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => null)),
             winner: null,
             player1: player1,
             player2: player2,
-            currentPlayer: player1 // Joueur 1 commence
+            currentPlayer: player1
         };
 
-        // Démarrer le jeu
         io.to(room).emit('start_game', room);
     }
 
     socket.on('make_move', (data) => {
-      
         const room = data.room;
-        const move = data.move;
+        const cell = data.cell;
         const player = socket.id;
-        const gameState = gameStates[room];
-        console.log(`move`);//llllllllllleeeeeeeeeeeProblemmeeeeeeeeeeeeestlaaaaaaaaaaaaa
-        
-        updateGameState(room, move, player);
-        io.to(room).emit('game_state', gameState);
-        
+
+        if (!room || !gameStates[room]) {
+            console.log(`Erreur : état du jeu introuvable pour la salle ${room}`);
+            return;
+        }
+
+        console.log(`Move reçu de ${player} pour la salle ${room}, cellule ${cell}`);
+        console.log(`État du jeu avant mise à jour pour la salle ${room}:`, gameStates[room]);
+
+        updateGameState(room, cell, player);
+        io.to(room).emit('game_state', gameStates[room]);
+
+        console.log(`État du jeu après mise à jour pour la salle ${room}:`, gameStates[room]);
     });
 
     socket.on('disconnect', () => {
