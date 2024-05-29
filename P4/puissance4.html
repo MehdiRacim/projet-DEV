@@ -52,6 +52,20 @@
             content: "O";
             color: blue;
         }
+
+        #game-result {
+            display: none;
+            font-size: 36px;
+            margin-top: 20px;
+        }
+
+        #restart-btn {
+            display: none;
+            font-size: 24px;
+            margin-top: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -68,28 +82,23 @@
             <div class="cell" data-index="7"></div>
             <div class="cell" data-index="8"></div>
         </div>
+        <div id="game-result"></div>
+        <button id="restart-btn" onclick="window.location.href='/'">Revenir à la page d'accueil</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const cells = document.querySelectorAll('.cell');
+            const gameResult = document.getElementById('game-result');
+            const restartBtn = document.getElementById('restart-btn');
             const socket = io();
             let currentRoom = null;
+            let currentPlayer = null;
 
             socket.on('start_game', (room) => {
                 currentRoom = room;
                 console.log('Game started in room:', room);
-            });
-
-            cells.forEach(cell => {
-                cell.addEventListener('click', () => {
-                    const index = cell.dataset.index;
-                    if (currentRoom) {
-                        socket.emit('make_move', { room: currentRoom, cell: index });
-                        console.log(`Cell clicked: ${index}, Room: ${currentRoom}`);
-                    }
-                });
             });
 
             socket.on('game_state', gameState => {
@@ -103,6 +112,24 @@
                         cell.classList.add('cross');
                     } else if (board[row][col] === gameState.player2) {
                         cell.classList.add('circle');
+                    }
+                });
+
+                if (gameState.winner) {
+                    const message = gameState.winner === socket.id ? 'Victoire!' : 'Défaite!';
+                    gameResult.textContent = message;
+                    gameResult.style.display = 'block';
+                    restartBtn.style.display = 'block';
+                    cells.forEach(cell => cell.style.pointerEvents = 'none'); // Disable further moves
+                }
+            });
+
+            cells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const index = cell.dataset.index;
+                    if (currentRoom) {
+                        socket.emit('make_move', { room: currentRoom, cell: index });
+                        console.log(`Cell clicked: ${index}, Room: ${currentRoom}`);
                     }
                 });
             });

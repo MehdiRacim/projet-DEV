@@ -40,9 +40,9 @@ function updateGameState(room, cell, player) {
     }
 
     gameState.board[row][col] = player;
-    gameState.winner = checkWin(gameState.board, player);
-
-    if (!gameState.winner) {
+    if (checkWin(gameState.board, player)) {
+        gameState.winner = player;
+    } else {
         gameState.currentPlayer = gameState.currentPlayer === gameState.player1 ? gameState.player2 : gameState.player1;
     }
 }
