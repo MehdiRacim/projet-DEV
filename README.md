@@ -17,7 +17,7 @@
 
 1. Clonez le dépôt :
    ```bash
-   git clone https://github.com/votre-utilisateur/tiens-le-code.git
+   git clone https://github.com/MehdiRacim/projet-DEV.git
    cd projet-DEV
 
 2. installer les dependances :
