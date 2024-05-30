@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morpion</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 10px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #ffffff;
+            border: 1px solid #000000;
+            font-size: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .cross::after {
+            content: "X";
+            color: red;
+        }
+
+        .circle::after {
+            content: "O";
+            color: blue;
+        }
+
+        #game-result {
+            display: none;
+            font-size: 36px;
+            margin-top: 20px;
+        }
+
+        #restart-btn {
+            display: none;
+            font-size: 24px;
+            margin-top: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        #playerName {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Morpion</h1>
+        <!-- Ajout de l'élément span pour afficher le pseudo du joueur -->
+        <span id="playerName"></span>
+        <div class="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <div id="game-result"></div>
+        <button id="restart-btn" onclick="window.location.href='/'">Revenir à la page d'accueil</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cells = document.querySelectorAll('.cell');
+            const gameResult = document.getElementById('game-result');
+            const restartBtn = document.getElementById('restart-btn');
+            const playerName = document.getElementById('playerName'); // Sélectionner l'élément pour afficher le pseudo
+            const socket = io();
+            let currentRoom = null;
+            let currentPlayer = null;
+
+            socket.on('start_game', (room) => {
+                currentRoom = room;
+                console.log('Game started in room:', room);
+            });
+
+            socket.on('game_state', gameState => {
+                console.log('Game state received:', gameState);
+                const board = gameState.board;
+                cells.forEach((cell, index) => {
+                    const row = Math.floor(index / 3);
+                    const col = index % 3;
+                    cell.className = 'cell'; // Reset class
+                    if (board[row][col] === gameState.player1) {
+                        cell.classList.add('cross');
+                    } else if (board[row][col] === gameState.player2) {
+                        cell.classList.add('circle');
+                    }
+                });
+
+                if (gameState.winner) {
+                    const message = gameState.winner === socket.id ? 'Victoire!' : 'Défaite!';
+                    gameResult.textContent = message;
+                    gameResult.style.display = 'block';
+                    restartBtn.style.display = 'block';
+                    cells.forEach(cell => cell.style.pointerEvents = 'none'); // Disable further moves
+                }
+            });
+
+            // Mettre à jour le pseudo lors de la réception de l'événement start_game
+            socket.on('start_game', (room, player1, player2) => {
+                const playerPseudo = socket.id === player1 ? player1 : player2;
+                playerName.textContent = `Vous jouez en tant que : ${playerPseudo}`;
+            });
+
+            cells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const index = cell.dataset.index;
+                    if (currentRoom) {
+                        socket.emit('make_move', { room: currentRoom, cell: index });
+                        console.log(`Cell clicked: ${index}, Room: ${currentRoom}`);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

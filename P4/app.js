@@ -56,11 +56,35 @@ app.get('/wait.html', (req, res) => {
 });
 
 app.get('/puissance4.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'puissance4.html'));
+    res.sendFile(path.join(__dirname, 'morpion.html'));
 });
 
+const mysql = require('mysql');
+
+// Connexion à la base de données
+const connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'morpion'
+});
+
+connection.connect((err) => {
+    if (err) {
+        console.error('Erreur de connexion à la base de données :', err);
+        return;
+    }
+    console.log('Connecté à la base de données MySQL');
+});
+
+const playerPseudos = {};
 io.on('connection', (socket) => {
     console.log('Nouveau client connecté', socket.id);
+
+    socket.on('pseudo_submit', (pseudo) => {
+        playerPseudos[socket.id] = pseudo;
+        console.log(`Pseudo enregistré pour ${socket.id}: ${pseudo}`);
+    });
 
     waitingPlayers.push({ id: socket.id });
     console.log(`Joueurs en attente: ${waitingPlayers.map(player => player.id)}`);
@@ -88,6 +112,23 @@ io.on('connection', (socket) => {
         io.to(room).emit('start_game', room);
     }
 
+    socket.on('disconnect', () => {
+        console.log('Client déconnecté', socket.id);
+        waitingPlayers = waitingPlayers.filter(player => player.id !== socket.id);
+        delete playerPseudos[socket.id]; // Supprime le pseudo associé à l'ID déconnecté
+    });
+
+    socket.on('pseudo_submit', (pseudo) => {
+        const userId = socket.id;
+        const sql = 'INSERT INTO utilisateurs (id, pseudo) VALUES (?, ?)';
+        connection.query(sql, [userId, pseudo], (err, result) => {
+            if (err) {
+                console.error('Erreur lors de l\'insertion du pseudo dans la base de données :', err);
+                return;
+            }
+            console.log('Pseudo inséré avec succès dans la base de données');
+        });
+    });
     socket.on('make_move', (data) => {
         const room = data.room;
         const cell = data.cell;
